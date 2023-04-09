@@ -35,4 +35,4 @@ def run_batch_eval(args, model, batch, **kwargs):
         topk_response=topk_response
     )
     score, indics = model_outputs
-    return np.array(score), np.array(indics)
+    return np.array(score.tolist()), np.array(indics.tolist())

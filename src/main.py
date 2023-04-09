@@ -6,7 +6,7 @@ import json
 
 from typing import Dict, Tuple
 from argparse import Namespace
-
+from pprint import pprint
 import numpy as np
 import torch
 
@@ -121,10 +121,10 @@ def train(args, train_dataset, eval_dataset, model: PreTrainedModel, tokenizer: 
                 epoch_iterator.set_postfix(Loss=tr_loss / local_steps)
                 total_log_loss = 0
 
-            if global_step != 0 and (global_step % 50 == 0):
+            if global_step != 0 and (global_step % 1000 == 0):
 
                 results = evaluate(args, eval_dataset, model, run_batch_fn_eval, desc=str(global_step))
-                print(f'"steps:"{global_step}\n {results}')
+                pprint(f'steps:{global_step}\n {results}')
 
                 output_dir = os.path.join(args.output_dir, "{}-{}".format("checkpoint", global_step))
                 os.makedirs(output_dir, exist_ok=True)
@@ -198,52 +198,55 @@ def get_eval_performance(args, scores):
     rk_cnt_5 = 0
     for item in scores:
         indics = item["indics"]
-        if len(indics) >= 1 and [0,0] in indics[:1]:
+        if len(indics) >= 1 and ([0,0]==indics[:1]).all(1).any():
             rk_cnt_1 += 1
+            print(indics[:1])
         if len(indics) >= 1 and 0 in indics[:1,0]:
             r_cnt_1 += 1
+            print(indics[:1])
         if len(indics) >= 1 and 0 in indics[:1,1]:
             k_cnt_1 += 1
+            print(indics[:1])
 
-        if len(indics) >= 2 and [0,0] in indics[:2]:
+        if len(indics) >= 2 and ([0,0]==indics[:2]).all(1).any():
             rk_cnt_2 += 1
         if len(indics) >= 2 and 0 in indics[:2,0]:
             r_cnt_2 += 1
         if len(indics) >= 2 and 0 in indics[:2,1]:
             k_cnt_2 += 1
 
-        if len(indics) >= 3 and [0,0] in indics[:3]:
+        if len(indics) >= 3 and ([0,0]==indics[:3]).all(1).any():
             rk_cnt_3 += 1
         if len(indics) >= 3 and 0 in indics[:3,0]:
             r_cnt_3 += 1
         if len(indics) >= 3 and 0 in indics[:3,1]:
             k_cnt_3 += 1
 
-        if len(indics) >= 5 and [0,0] in indics[:5]:
+        if len(indics) >= 5 and ([0,0]==indics[:5]).all(1).any():
             rk_cnt_5 += 1
         if len(indics) >= 5 and 0 in indics[:5,0]:
             r_cnt_5 += 1
         if len(indics) >= 5 and 0 in indics[:5,1]:
             k_cnt_5 += 1
-            
+
     return {
         "knowledge": {
-            "knowledge_accuracy": float(k_cnt_1 / total),
-            "knowledge_recall_2": float(k_cnt_2 / total),
-            "knowledge_recall_3": float(k_cnt_3 / total),
-            "knowledge_recall_5": float(k_cnt_5 / total),
+            "accuracy": format(float(k_cnt_1 / total), '.4f'),
+            "recall_2": format(float(k_cnt_2 / total), '.4f'),
+            "recall_3": format(float(k_cnt_3 / total), '.4f'),
+            "recall_5": format(float(k_cnt_5 / total), '.4f'),
         },
         "response": {
-            "response_accuracy": float(r_cnt_1 / total),
-            "response_recall_2": float(r_cnt_2 / total),
-            "response_recall_3": float(r_cnt_3 / total),
-            "response_recall_5": float(r_cnt_5 / total),
+            "accuracy": format(float(r_cnt_1 / total), '.4f'),
+            "recall_2": format(float(r_cnt_2 / total), '.4f'),
+            "recall_3": format(float(r_cnt_3 / total), '.4f'),
+            "recall_5": format(float(r_cnt_5 / total), '.4f'),
         },
         "both": {
-            "accuracy": float(rk_cnt_1 / total),
-            "recall_2": float(rk_cnt_2 / total),
-            "recall_3": float(rk_cnt_3 / total),
-            "recall_5": float(rk_cnt_5 / total),
+            "accuracy": format(float(rk_cnt_1 / total), '.4f'),
+            "recall_2": format(float(rk_cnt_2 / total), '.4f'),
+            "recall_3": format(float(rk_cnt_3 / total), '.4f'),
+            "recall_5": format(float(rk_cnt_5 / total), '.4f'),
         }
     }
 
@@ -313,7 +316,7 @@ def main():
         # Evaluation
         eval_dataset = dataset_class(dataset_args, tokenizer, split_type=args.eval_dataset)
         result = evaluate(args, eval_dataset, model, run_batch_fn_eval, desc=args.eval_desc or "val")
-        print(result)
+        pprint(result)
 
     else:
         if args.checkpoint is not None:
