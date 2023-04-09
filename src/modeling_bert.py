@@ -15,7 +15,6 @@
 # limitations under the License.
 """PyTorch BERT model. """
 
-
 import math
 import os
 import warnings
@@ -27,6 +26,7 @@ import torch.utils.checkpoint
 from torch import nn
 from torch.nn import CrossEntropyLoss, MSELoss
 
+from sentence_transformers.models import Pooling
 from transformers.activations import ACT2FN
 from transformers.file_utils import (
     ModelOutput,
@@ -59,7 +59,6 @@ from transformers.models.bert.configuration_bert import BertConfig
 import torch.nn.functional as F
 
 from transformers.file_utils import ModelOutput
-
 
 logger = logging.get_logger(__name__)
 
@@ -123,8 +122,8 @@ def load_tf_weights_in_bert(model, config, tf_checkpoint_path):
         # adam_v and adam_m are variables used in AdamWeightDecayOptimizer to calculated m and v
         # which are not required for using pretrained model
         if any(
-            n in ["adam_v", "adam_m", "AdamWeightDecayOptimizer", "AdamWeightDecayOptimizer_1", "global_step"]
-            for n in name
+                n in ["adam_v", "adam_m", "AdamWeightDecayOptimizer", "AdamWeightDecayOptimizer_1", "global_step"]
+                for n in name
         ):
             logger.info("Skipping {}".format("/".join(name)))
             continue
@@ -157,7 +156,7 @@ def load_tf_weights_in_bert(model, config, tf_checkpoint_path):
             array = np.transpose(array)
         try:
             assert (
-                pointer.shape == array.shape
+                    pointer.shape == array.shape
             ), f"Pointer shape {pointer.shape} and array shape {array.shape} mismatched"
         except AssertionError as e:
             e.args += (pointer.shape, array.shape)
@@ -187,7 +186,8 @@ class BertEmbeddings(nn.Module):
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
 
     def forward(
-        self, input_ids=None, token_type_ids=None, position_ids=None, da_ids=None, inputs_embeds=None, past_key_values_length=0
+            self, input_ids=None, token_type_ids=None, position_ids=None, da_ids=None, inputs_embeds=None,
+            past_key_values_length=0
     ):
         if input_ids is not None:
             input_shape = input_ids.size()
@@ -197,7 +197,7 @@ class BertEmbeddings(nn.Module):
         seq_length = input_shape[1]
 
         if position_ids is None:
-            position_ids = self.position_ids[:, past_key_values_length : seq_length + past_key_values_length]
+            position_ids = self.position_ids[:, past_key_values_length: seq_length + past_key_values_length]
 
         if token_type_ids is None:
             token_type_ids = torch.zeros(input_shape, dtype=torch.long, device=self.position_ids.device)
@@ -248,14 +248,14 @@ class BertSelfAttention(nn.Module):
         return x.permute(0, 2, 1, 3)
 
     def forward(
-        self,
-        hidden_states,
-        attention_mask=None,
-        head_mask=None,
-        encoder_hidden_states=None,
-        encoder_attention_mask=None,
-        past_key_value=None,
-        output_attentions=False,
+            self,
+            hidden_states,
+            attention_mask=None,
+            head_mask=None,
+            encoder_hidden_states=None,
+            encoder_attention_mask=None,
+            past_key_value=None,
+            output_attentions=False,
     ):
         mixed_query_layer = self.query(hidden_states)
 
@@ -382,14 +382,14 @@ class BertAttention(nn.Module):
         self.pruned_heads = self.pruned_heads.union(heads)
 
     def forward(
-        self,
-        hidden_states,
-        attention_mask=None,
-        head_mask=None,
-        encoder_hidden_states=None,
-        encoder_attention_mask=None,
-        past_key_value=None,
-        output_attentions=False,
+            self,
+            hidden_states,
+            attention_mask=None,
+            head_mask=None,
+            encoder_hidden_states=None,
+            encoder_attention_mask=None,
+            past_key_value=None,
+            output_attentions=False,
     ):
         self_outputs = self.self(
             hidden_states,
@@ -449,14 +449,14 @@ class BertLayer(nn.Module):
         self.output = BertOutput(config)
 
     def forward(
-        self,
-        hidden_states,
-        attention_mask=None,
-        head_mask=None,
-        encoder_hidden_states=None,
-        encoder_attention_mask=None,
-        past_key_value=None,
-        output_attentions=False,
+            self,
+            hidden_states,
+            attention_mask=None,
+            head_mask=None,
+            encoder_hidden_states=None,
+            encoder_attention_mask=None,
+            past_key_value=None,
+            output_attentions=False,
     ):
         # decoder uni-directional self-attention cached key/values tuple is at positions 1,2
         self_attn_past_key_value = past_key_value[:2] if past_key_value is not None else None
@@ -524,17 +524,17 @@ class BertEncoder(nn.Module):
         self.layer = nn.ModuleList([BertLayer(config) for _ in range(config.num_hidden_layers)])
 
     def forward(
-        self,
-        hidden_states,
-        attention_mask=None,
-        head_mask=None,
-        encoder_hidden_states=None,
-        encoder_attention_mask=None,
-        past_key_values=None,
-        use_cache=None,
-        output_attentions=False,
-        output_hidden_states=False,
-        return_dict=True,
+            self,
+            hidden_states,
+            attention_mask=None,
+            head_mask=None,
+            encoder_hidden_states=None,
+            encoder_attention_mask=None,
+            past_key_values=None,
+            use_cache=None,
+            output_attentions=False,
+            output_hidden_states=False,
+            return_dict=True,
     ):
         all_hidden_states = () if output_hidden_states else None
         all_self_attentions = () if output_attentions else None
@@ -867,21 +867,21 @@ class BertModel(BertPreTrainedModel):
         config_class=_CONFIG_FOR_DOC,
     )
     def forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        encoder_hidden_states=None,
-        encoder_attention_mask=None,
-        past_key_values=None,
-        use_cache=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
-        da_ids = None,
+            self,
+            input_ids=None,
+            attention_mask=None,
+            token_type_ids=None,
+            position_ids=None,
+            head_mask=None,
+            inputs_embeds=None,
+            encoder_hidden_states=None,
+            encoder_attention_mask=None,
+            past_key_values=None,
+            use_cache=None,
+            output_attentions=None,
+            output_hidden_states=None,
+            return_dict=None,
+            da_ids=None,
     ):
         r"""
         encoder_hidden_states  (:obj:`torch.FloatTensor` of shape :obj:`(batch_size, sequence_length, hidden_size)`, `optional`):
@@ -963,7 +963,7 @@ class BertModel(BertPreTrainedModel):
             token_type_ids=token_type_ids,
             inputs_embeds=inputs_embeds,
             past_key_values_length=past_key_values_length,
-            da_ids = da_ids,
+            da_ids=da_ids,
         )
         encoder_outputs = self.encoder(
             embedding_output,
@@ -1018,18 +1018,18 @@ class BertForPreTraining(BertPreTrainedModel):
     @add_start_docstrings_to_model_forward(BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
     @replace_return_docstrings(output_type=BertForPreTrainingOutput, config_class=_CONFIG_FOR_DOC)
     def forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        labels=None,
-        next_sentence_label=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
+            self,
+            input_ids=None,
+            attention_mask=None,
+            token_type_ids=None,
+            position_ids=None,
+            head_mask=None,
+            inputs_embeds=None,
+            labels=None,
+            next_sentence_label=None,
+            output_attentions=None,
+            output_hidden_states=None,
+            return_dict=None,
     ):
         r"""
         labels (:obj:`torch.LongTensor` of shape ``(batch_size, sequence_length)``, `optional`):
@@ -1102,7 +1102,6 @@ class BertForPreTraining(BertPreTrainedModel):
     """Bert Model with a `language modeling` head on top for CLM fine-tuning. """, BERT_START_DOCSTRING
 )
 class BertLMHeadModel(BertPreTrainedModel):
-
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
     _keys_to_ignore_on_load_missing = [r"position_ids", r"predictions.decoder.bias"]
 
@@ -1126,21 +1125,21 @@ class BertLMHeadModel(BertPreTrainedModel):
     @add_start_docstrings_to_model_forward(BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
     @replace_return_docstrings(output_type=CausalLMOutputWithCrossAttentions, config_class=_CONFIG_FOR_DOC)
     def forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        encoder_hidden_states=None,
-        encoder_attention_mask=None,
-        labels=None,
-        past_key_values=None,
-        use_cache=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
+            self,
+            input_ids=None,
+            attention_mask=None,
+            token_type_ids=None,
+            position_ids=None,
+            head_mask=None,
+            inputs_embeds=None,
+            encoder_hidden_states=None,
+            encoder_attention_mask=None,
+            labels=None,
+            past_key_values=None,
+            use_cache=None,
+            output_attentions=None,
+            output_hidden_states=None,
+            return_dict=None,
     ):
         r"""
         encoder_hidden_states  (:obj:`torch.FloatTensor` of shape :obj:`(batch_size, sequence_length, hidden_size)`, `optional`):
@@ -1248,7 +1247,6 @@ class BertLMHeadModel(BertPreTrainedModel):
 
 @add_start_docstrings("""Bert Model with a `language modeling` head on top. """, BERT_START_DOCSTRING)
 class BertForMaskedLM(BertPreTrainedModel):
-
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
     _keys_to_ignore_on_load_missing = [r"position_ids", r"predictions.decoder.bias"]
 
@@ -1280,19 +1278,19 @@ class BertForMaskedLM(BertPreTrainedModel):
         config_class=_CONFIG_FOR_DOC,
     )
     def forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        encoder_hidden_states=None,
-        encoder_attention_mask=None,
-        labels=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
+            self,
+            input_ids=None,
+            attention_mask=None,
+            token_type_ids=None,
+            position_ids=None,
+            head_mask=None,
+            inputs_embeds=None,
+            encoder_hidden_states=None,
+            encoder_attention_mask=None,
+            labels=None,
+            output_attentions=None,
+            output_hidden_states=None,
+            return_dict=None,
     ):
         r"""
         labels (:obj:`torch.LongTensor` of shape :obj:`(batch_size, sequence_length)`, `optional`):
@@ -1367,18 +1365,18 @@ class BertForNextSentencePrediction(BertPreTrainedModel):
     @add_start_docstrings_to_model_forward(BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
     @replace_return_docstrings(output_type=NextSentencePredictorOutput, config_class=_CONFIG_FOR_DOC)
     def forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        labels=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
-        **kwargs
+            self,
+            input_ids=None,
+            attention_mask=None,
+            token_type_ids=None,
+            position_ids=None,
+            head_mask=None,
+            inputs_embeds=None,
+            labels=None,
+            output_attentions=None,
+            output_hidden_states=None,
+            return_dict=None,
+            **kwargs
     ):
         r"""
         labels (:obj:`torch.LongTensor` of shape :obj:`(batch_size,)`, `optional`):
@@ -1475,17 +1473,17 @@ class BertForSequenceClassification(BertPreTrainedModel):
         config_class=_CONFIG_FOR_DOC,
     )
     def forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        labels=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
+            self,
+            input_ids=None,
+            attention_mask=None,
+            token_type_ids=None,
+            position_ids=None,
+            head_mask=None,
+            inputs_embeds=None,
+            labels=None,
+            output_attentions=None,
+            output_hidden_states=None,
+            return_dict=None,
     ):
         r"""
         labels (:obj:`torch.LongTensor` of shape :obj:`(batch_size,)`, `optional`):
@@ -1562,17 +1560,17 @@ class BertForMultipleChoice(BertPreTrainedModel):
         config_class=_CONFIG_FOR_DOC,
     )
     def forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        labels=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
+            self,
+            input_ids=None,
+            attention_mask=None,
+            token_type_ids=None,
+            position_ids=None,
+            head_mask=None,
+            inputs_embeds=None,
+            labels=None,
+            output_attentions=None,
+            output_hidden_states=None,
+            return_dict=None,
     ):
         r"""
         labels (:obj:`torch.LongTensor` of shape :obj:`(batch_size,)`, `optional`):
@@ -1636,7 +1634,6 @@ class BertForMultipleChoice(BertPreTrainedModel):
     BERT_START_DOCSTRING,
 )
 class BertForTokenClassification(BertPreTrainedModel):
-
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
 
     def __init__(self, config):
@@ -1657,17 +1654,17 @@ class BertForTokenClassification(BertPreTrainedModel):
         config_class=_CONFIG_FOR_DOC,
     )
     def forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        labels=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
+            self,
+            input_ids=None,
+            attention_mask=None,
+            token_type_ids=None,
+            position_ids=None,
+            head_mask=None,
+            inputs_embeds=None,
+            labels=None,
+            output_attentions=None,
+            output_hidden_states=None,
+            return_dict=None,
     ):
         r"""
         labels (:obj:`torch.LongTensor` of shape :obj:`(batch_size, sequence_length)`, `optional`):
@@ -1727,7 +1724,6 @@ class BertForTokenClassification(BertPreTrainedModel):
     BERT_START_DOCSTRING,
 )
 class BertForQuestionAnswering(BertPreTrainedModel):
-
     _keys_to_ignore_on_load_unexpected = [r"pooler"]
 
     def __init__(self, config):
@@ -1747,21 +1743,21 @@ class BertForQuestionAnswering(BertPreTrainedModel):
         config_class=_CONFIG_FOR_DOC,
     )
     def forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        start_positions=None,
-        end_positions=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
-        da_type_ids=None,
-        lable=None,
-        sep_position=None,
+            self,
+            input_ids=None,
+            attention_mask=None,
+            token_type_ids=None,
+            position_ids=None,
+            head_mask=None,
+            inputs_embeds=None,
+            start_positions=None,
+            end_positions=None,
+            output_attentions=None,
+            output_hidden_states=None,
+            return_dict=None,
+            da_type_ids=None,
+            lable=None,
+            sep_position=None,
     ):
         r"""
         start_positions (:obj:`torch.LongTensor` of shape :obj:`(batch_size,)`, `optional`):
@@ -1823,6 +1819,7 @@ class BertForQuestionAnswering(BertPreTrainedModel):
             attentions=outputs.attentions,
         )
 
+
 class BertForSequenceClassificationWithHingeLoss(BertPreTrainedModel):
     def __init__(self, config):
         super().__init__(config)
@@ -1842,17 +1839,17 @@ class BertForSequenceClassificationWithHingeLoss(BertPreTrainedModel):
         config_class=_CONFIG_FOR_DOC,
     )
     def forward(
-        self,
-        input_ids=None,
-        attention_mask=None,
-        token_type_ids=None,
-        position_ids=None,
-        head_mask=None,
-        inputs_embeds=None,
-        labels=None,
-        output_attentions=None,
-        output_hidden_states=None,
-        return_dict=None,
+            self,
+            input_ids=None,
+            attention_mask=None,
+            token_type_ids=None,
+            position_ids=None,
+            head_mask=None,
+            inputs_embeds=None,
+            labels=None,
+            output_attentions=None,
+            output_hidden_states=None,
+            return_dict=None,
     ):
         r"""
         labels (:obj:`torch.LongTensor` of shape :obj:`(batch_size,)`, `optional`):
@@ -1901,38 +1898,38 @@ class BertForSequenceClassificationWithHingeLoss(BertPreTrainedModel):
             attentions=outputs.attentions,
         )
 
-
-    def HingeLoss(self, logits, labels, lam = 0.5):
+    def HingeLoss(self, logits, labels, lam=0.5):
         positives = logits.take(torch.nonzero(labels))
-        nagatives = logits.take(torch.nonzero(1-labels))
-        if positives.shape[0] != nagatives.shape[0] :
+        negatives = logits.take(torch.nonzero(1 - labels))
+        if positives.shape[0] != negatives.shape[0]:
             loss_fct = MSELoss()
             return loss_fct(logits, labels)
         else:
             positives = positives.view(-1)
-            nagatives = nagatives.view(-1)
+            negatives = negatives.view(-1)
             # hinge = torch.ones(n) - (1 - lam)
             # if not hinge.is_cuda:
             #     print(torch.cuda.is_available())
             #     hinge.to(device=torch.device('cuda'))
             # if not positives.is_cuda:
             #     positives.to(device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
-            # if not nagatives.is_cuda:
-            #     nagatives.to(device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
+            # if not negatives.is_cuda:
+            #     negatives.to(device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
 
             # print(hinge.is_cuda)
             # print(positives.is_cuda)
-            # print(nagatives.is_cuda)
+            # print(negatives.is_cuda)
 
-            loss = 1 * lam + nagatives - positives
+            loss = 1 * lam + negatives - positives
             return loss.mean()
+
 
 @dataclass
 class BertScoreOutput(ModelOutput):
-
     loss: Optional[torch.FloatTensor] = None
     scores: Optional[Tuple[torch.FloatTensor]] = None
     features: Optional[Tuple[torch.FloatTensor]] = None
+
 
 class BertScore(BertPreTrainedModel):
     def __init__(self, config):
@@ -2007,12 +2004,12 @@ class BertScore(BertPreTrainedModel):
     ):
         all_features = []
         all_scores = []
-        cluster_str = ["positive","nagative"]
+        cluster_str = ["positive", "nagative"]
         for str in cluster_str:
             input_ids_in_cur_cluster = [
                 batch[key]
                 for key in batch.keys()
-                if str +'_input_ids' in key
+                if str + '_input_ids' in key
             ]
             token_type_ids_in_cur_cluster = [
                 batch[key]
@@ -2085,7 +2082,6 @@ class BertScore(BertPreTrainedModel):
         # dual_mlr_loss = feature_mlr_loss + score_mlr_loss + bce_loss
         dual_mlr_loss = feature_mlr_loss + score_mlr_loss
 
-
         loss_info_dict = {
             'dual_mlr_loss': dual_mlr_loss.item(),
             # 'bce_loss': bce_loss.item(),
@@ -2136,7 +2132,7 @@ class BertScore(BertPreTrainedModel):
             centroids.append(centroid)
         order_loss = None
         for i, better_centroid in enumerate(centroids):
-            for worse_centroid in centroids[i+1:]:
+            for worse_centroid in centroids[i + 1:]:
                 cur_order_loss = F.relu(
                     worse_centroid.norm(dim=-1) - better_centroid.norm(dim=-1))
                 if order_loss is None:
@@ -2147,7 +2143,7 @@ class BertScore(BertPreTrainedModel):
         return order_loss
 
     def _compute_inter_cluster_distances(self,
-                                         all_data_points) :
+                                         all_data_points):
         inter_distance_list = []
         inter_weight_list = []
         centroids = []
@@ -2157,7 +2153,7 @@ class BertScore(BertPreTrainedModel):
             # self.logger.debug(
             #     'centroid size: {}'.format(centroid.size()))
         for i, better_centroid in enumerate(centroids):
-            for j, worse_centroid in enumerate(centroids[i+1:]):
+            for j, worse_centroid in enumerate(centroids[i + 1:]):
                 inter_distance = self.distance_function(
                     better_centroid, worse_centroid)
                 inter_distance = inter_distance.unsqueeze(0)
@@ -2187,7 +2183,6 @@ class BertScore(BertPreTrainedModel):
 
         intra_distances = torch.cat(intra_distance_list, dim=0)
         return intra_distances
-
 
     @property
     def centroid_function(self):
@@ -2219,643 +2214,189 @@ class BertScore(BertPreTrainedModel):
         tensor = list(batch.values())[0]
         return tensor.size(0)
 
-class BertMultiSampelsWithHingeLoss(BertPreTrainedModel):
-    def __init__(self, config, loss_type="hinge",  do_predict=False):
+
+
+def get_sim_matrix(a, b):
+    return torch.cosine_similarity(a.unsqueeze(1), b.unsqueeze(0), dim=2)
+
+class BertMultiSampelsWithInfoNceLoss(BertPreTrainedModel):
+    def __init__(self, config):
         super().__init__(config)
-        self.loss_type = loss_type
-        self.do_predict = do_predict
-        self.num_labels = 1
 
         self.bert = BertModel(config)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        bert_hidden_size = self.bert.config.hidden_size
-        # mlp_hidden_size_1 = int(bert_hidden_size / 12)
-        # mlp_hidden_size_2 = int(mlp_hidden_size_1 / 8)
-        # self.mlp = nn.Sequential(
-        #     nn.Linear(bert_hidden_size, mlp_hidden_size_1),
-        #     nn.Tanh(),
-        #     nn.Linear(mlp_hidden_size_1, mlp_hidden_size_2),
-        #     nn.Tanh(),
-        #     nn.Linear(mlp_hidden_size_2, 1),
-        #     nn.Sigmoid())
+        self.lossF = infoNceLoss()
 
-        mlp_hidden_size_1 = int(bert_hidden_size / 32)
-        self.mlp = nn.Sequential(
-            nn.Linear(bert_hidden_size, mlp_hidden_size_1),
-            nn.Tanh(),
-            nn.Linear(mlp_hidden_size_1, 1),
-            nn.Sigmoid())
+        # self.w = nn.Parameter(torch.FloatTensor([1.0,1.0,1.0]),requires_grad=True)
 
         self.lam = 0.5
         self.init_weights()
+
     def forward(
             self,
-            output_attentions=None,
-            output_hidden_states=None,
-            return_dict=None,
-            **batch,
+            input_ids,
+            attention_mask,
+            token_type_ids,
+            is_predict=False,
+            topk_knowledge=None,
+            topk_response=None
     ):
-        if "input_ids" in batch.keys():
-            outputs = self.bert(
-                batch["input_ids"],
-                attention_mask=batch["attention_mask"],
-                token_type_ids=batch["token_type_ids"],
-                output_attentions=output_attentions,
-                output_hidden_states=output_hidden_states,
-                return_dict=return_dict,
-            )
-            pooled_output = outputs[1]
-            pooled_output = self.dropout(pooled_output)
-            score = self.mlp(pooled_output)
-            return BertScoreOutput(
-                loss=None,
-                features=pooled_output,
-                scores=score,
-            )
+        # TODO
+        # train
+        query_input_ids = input_ids["query_input_ids"]
+        knowledge_input_ids = input_ids["knowledge_input_ids"]
+        response_input_ids = input_ids["response_input_ids"]
 
-        else:
-            return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-            batch_size = batch["positive_input_ids_0"].size()[0]
+        query_attention_mask = attention_mask["query_attention_mask"]
+        knowledge_attention_mask = attention_mask["knowledge_attention_mask"]
+        response_attention_mask = attention_mask["response_attention_mask"]
 
-            all_features, all_scores = self._get_all_features_and_scores(
-                batch=batch,
-                output_attentions=output_attentions,
-                output_hidden_states=output_hidden_states,
-                return_dict=return_dict,
-            )
-            positives = all_scores[0]
-            nagatives = all_scores[1]
-            if self.loss_type =="hinge":
-                loss = self.hinge_loss(positives,nagatives,batch_size,self.lam)
-            else:
-                loss = self.infoNce_loss(positives, nagatives, batch_size)
+        query_token_type_ids = token_type_ids["query_token_type_ids"]
+        knowledge_token_type_ids = token_type_ids["knowledge_token_type_ids"]
+        response_token_type_ids = token_type_ids["response_token_type_ids"]
+
+        query_pooling = self.bert_pooling(query_input_ids,query_attention_mask,query_token_type_ids)
+        knowledge_pooling = self.bert_pooling(knowledge_input_ids,knowledge_attention_mask,knowledge_token_type_ids)
+        response_pooling = self.bert_pooling(response_input_ids,response_attention_mask,response_token_type_ids)
+
+        if not is_predict:
+            batch_size = query_pooling.size(0)
+            # [B,768]->[B,1]->[B,B]
+            qk_pos = torch.cosine_similarity(query_pooling, knowledge_pooling).unsqueeze(1).expand(batch_size,batch_size)
+            qr_pos = torch.cosine_similarity(query_pooling, response_pooling).unsqueeze(1).expand(batch_size,batch_size)
+            kr_pos = torch.cosine_similarity(knowledge_pooling, response_pooling).unsqueeze(1).expand(batch_size,batch_size)
+
+
+            qk_sim_matrix = get_sim_matrix(query_pooling,knowledge_pooling)
+            rk_sim_matrix = get_sim_matrix(response_pooling,knowledge_pooling)
+            qr_sim_matrix = get_sim_matrix(query_pooling,response_pooling)
+            kq_sim_matrix = get_sim_matrix(knowledge_pooling,query_pooling)
+            kr_sim_matrix = get_sim_matrix(knowledge_pooling,response_pooling)
+            rq_sim_matrix = get_sim_matrix(response_pooling,query_pooling)
+
+            # negative knowledge
+            sim_ne_k = qr_pos + qk_sim_matrix + rk_sim_matrix
+            # negative response
+            sim_ne_r = qk_pos + qr_sim_matrix + kr_sim_matrix
+
+            # 拼接后面，此时每一行有两个正例的分数
+            sim_matrix = torch.cat((sim_ne_k,sim_ne_r),dim=1)
+            print(sim_matrix)
+
+            # weights = F.softmax(self.w)
+            # print(torch.stack((qk_sim_matrix,rk_sim_matrix,qr_sim_matrix),dim=0).size())
+            # sim_matrix = torch.mul(weights.unsqueeze(1).unsqueeze(2), torch.stack((qk_sim_matrix,rk_sim_matrix,qr_sim_matrix),dim=0)).sum(0)
+            
+            # print(sim_matrix)
+            # print(self.w)
+            loss = self.lossF(sim_matrix)
+            
+            scores = torch.diag(sim_matrix).unsqueeze(1)
 
             return BertScoreOutput(
                 loss=loss,
-                features=all_features,
-                scores=all_scores,
-            )
-    def _get_all_features_and_scores(
-            self,
-            batch=None,
-            output_attentions=None,
-            output_hidden_states=None,
-            return_dict=None,
-    ):
-        all_features = []
-        all_scores = []
-        cluster_str = ["positive","nagative"]
-        for str in cluster_str:
-            input_ids_in_cur_cluster = [
-                batch[key]
-                for key in batch.keys()
-                if str +'_input_ids' in key
-            ]
-            token_type_ids_in_cur_cluster = [
-                batch[key]
-                for key in batch.keys()
-                if str + '_token_type_ids' in key
-            ]
-            attention_mask_in_cur_cluster = [
-                batch[key]
-                for key in batch.keys()
-                if str + '_attention_mask' in key
-            ]
-            feature_list = []
-            score_list = []
-            for input_ids, token_type_ids, attention_mask in zip(
-                    input_ids_in_cur_cluster,
-                    token_type_ids_in_cur_cluster,
-                    attention_mask_in_cur_cluster):
-                outputs = self.bert(
-                    input_ids,
-                    attention_mask=attention_mask,
-                    token_type_ids=token_type_ids,
-                    output_attentions=output_attentions,
-                    output_hidden_states=output_hidden_states,
-                    return_dict=return_dict,
-                )
-                pooled_output = outputs[1]
-                pooled_output = self.dropout(pooled_output)
-                score = self.mlp(pooled_output)
-                feature_list.append(pooled_output.unsqueeze(0))
-                score_list.append(score.unsqueeze(0))
-            features_in_cur_cluster = torch.cat(feature_list, dim=0)
-            scores_in_cur_cluster = torch.cat(score_list, dim=0)
-            all_features.append(features_in_cur_cluster)
-            all_scores.append(scores_in_cur_cluster)
-        return all_features, all_scores
-
-    def hinge_loss(self,positives,nagatives,batch_size,lam):
-        positives = positives.view(-1)
-        nagatives = nagatives.view(batch_size, -1).max(dim=1).values
-        loss = 1 * lam + nagatives - positives
-        return loss.mean()
-
-    def infoNce_loss(self,positives, nagatives,batch_size):
-        positives = positives.view(batch_size,-1)
-        nagatives = nagatives.view(batch_size,-1)
-        pos_e = torch.exp(positives)
-        loss = -1 * pos_e / (pos_e + torch.exp(nagatives).sum(dim=1))
-        return loss.mean()
-
-
-class BertMultiSampelsWithHingeLoss_3Layers(BertPreTrainedModel):
-    def __init__(self, config, loss_type="hinge",  do_predict=False):
-        super().__init__(config)
-        self.loss_type = loss_type
-        self.do_predict = do_predict
-        self.num_labels = 1
-
-        self.bert = BertModel(config)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        bert_hidden_size = self.bert.config.hidden_size
-        mlp_hidden_size_1 = int(bert_hidden_size / 12)
-        mlp_hidden_size_2 = int(mlp_hidden_size_1 / 8)
-        self.mlp = nn.Sequential(
-            nn.Linear(bert_hidden_size, mlp_hidden_size_1),
-            nn.Tanh(),
-            nn.Linear(mlp_hidden_size_1, mlp_hidden_size_2),
-            nn.Tanh(),
-            nn.Linear(mlp_hidden_size_2, 1),
-            nn.Sigmoid())
-        self.lam = 0.5
-        self.init_weights()
-    def forward(
-            self,
-            output_attentions=None,
-            output_hidden_states=None,
-            return_dict=None,
-            **batch,
-    ):
-        if "input_ids" in batch.keys():
-            outputs = self.bert(
-                batch["input_ids"],
-                attention_mask=batch["attention_mask"],
-                token_type_ids=batch["token_type_ids"],
-                output_attentions=output_attentions,
-                output_hidden_states=output_hidden_states,
-                return_dict=return_dict,
-            )
-            pooled_output = outputs[1]
-            pooled_output = self.dropout(pooled_output)
-            score = self.mlp(pooled_output)
-            return BertScoreOutput(
-                loss=None,
-                features=pooled_output,
-                scores=score,
+                scores=scores,
+                features=None,
             )
 
         else:
-            return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-            batch_size = batch["positive_input_ids_0"].size()[0]
+            # [num, 60]
+            k_input_ids_list = torch.cat((knowledge_input_ids,input_ids["ne_knowledge_input_ids_list"].squeeze(0)))
+            k_attention_mask_list = torch.cat((knowledge_attention_mask,attention_mask["ne_knowledge_attention_mask_list"].squeeze(0)))
+            k_token_type_ids_list = torch.cat((knowledge_token_type_ids,token_type_ids["ne_knowledge_token_type_ids_list"].squeeze(0)))
+            # [num, 40]
+            r_input_ids_list = torch.cat((response_input_ids,input_ids["ne_response_input_ids_list"].squeeze(0)))
+            r_attention_mask_list = torch.cat((response_attention_mask,attention_mask["ne_response_attention_mask_list"].squeeze(0)))
+            r_token_type_ids_list = torch.cat((response_token_type_ids,token_type_ids["ne_response_token_type_ids_list"].squeeze(0)))
 
-            all_features, all_scores = self._get_all_features_and_scores(
-                batch=batch,
-                output_attentions=output_attentions,
-                output_hidden_states=output_hidden_states,
-                return_dict=return_dict,
-            )
-            positives = all_scores[0]
-            nagatives = all_scores[1]
-            if self.loss_type =="hinge":
-                loss = self.hinge_loss(positives,nagatives,batch_size,self.lam)
-            else:
-                loss = self.infoNce_loss(positives, nagatives, batch_size)
 
-            return BertScoreOutput(
-                loss=loss,
-                features=all_features,
-                scores=all_scores,
-            )
-    def _get_all_features_and_scores(
-            self,
-            batch=None,
-            output_attentions=None,
-            output_hidden_states=None,
-            return_dict=None,
-    ):
-        all_features = []
-        all_scores = []
-        cluster_str = ["positive","nagative"]
-        for str in cluster_str:
-            input_ids_in_cur_cluster = [
-                batch[key]
-                for key in batch.keys()
-                if str +'_input_ids' in key
-            ]
-            token_type_ids_in_cur_cluster = [
-                batch[key]
-                for key in batch.keys()
-                if str + '_token_type_ids' in key
-            ]
-            attention_mask_in_cur_cluster = [
-                batch[key]
-                for key in batch.keys()
-                if str + '_attention_mask' in key
-            ]
-            feature_list = []
-            score_list = []
-            for input_ids, token_type_ids, attention_mask in zip(
-                    input_ids_in_cur_cluster,
-                    token_type_ids_in_cur_cluster,
-                    attention_mask_in_cur_cluster):
-                outputs = self.bert(
-                    input_ids,
-                    attention_mask=attention_mask,
-                    token_type_ids=token_type_ids,
-                    output_attentions=output_attentions,
-                    output_hidden_states=output_hidden_states,
-                    return_dict=return_dict,
-                )
-                pooled_output = outputs[1]
-                pooled_output = self.dropout(pooled_output)
-                score = self.mlp(pooled_output)
-                feature_list.append(pooled_output.unsqueeze(0))
-                score_list.append(score.unsqueeze(0))
-            features_in_cur_cluster = torch.cat(feature_list, dim=0)
-            scores_in_cur_cluster = torch.cat(score_list, dim=0)
-            all_features.append(features_in_cur_cluster)
-            all_scores.append(scores_in_cur_cluster)
-        return all_features, all_scores
+            num_k = k_input_ids_list.size(0)
+            num_r = r_input_ids_list.size(0)
+            topk = min(topk_knowledge,num_k)
+            topr = min(topk_response,num_r)
 
-    def hinge_loss(self,positives,nagatives,batch_size,lam):
-        positives = positives.view(-1)
-        nagatives = nagatives.view(batch_size, -1).max(dim=1).values
-        loss = 1 * lam + nagatives - positives
+            knowledge_pooling_list = self.bert_pooling(k_input_ids_list,k_attention_mask_list,k_token_type_ids_list)
+            response_pooling_list = self.bert_pooling(r_input_ids_list,r_attention_mask_list,r_token_type_ids_list)
+            # [1,768] [num,768] -> [num]
+            qk_score = torch.cosine_similarity(query_pooling,knowledge_pooling_list,dim=1)
+            qk_sort, qk_sort_arg = torch.sort(qk_score, descending=True)
+            topk_indics = qk_sort_arg[:topk]
+            # [topk,768]
+            topk_pooling = knowledge_pooling_list[topk_indics]
+            # [topk]
+            qtopk_score = qk_sort[:topk]
+            
+            # [1,768] [num,768] -> [num]
+            qr_score = torch.cosine_similarity(query_pooling,response_pooling_list,dim=1)
+            qr_sort, qr_sort_arg = torch.sort(qr_score, descending=True)
+            topr_indics = qr_sort_arg[:topr]
+            # [topr,768]
+            topr_pooling = response_pooling_list[topr_indics]
+            # [topr]
+            qtopr_score = qr_sort[:topr]       
+
+            #
+            #   [topr, topk]
+            #
+
+            # [topr, 768] [topk, 768] -> [topr, topk]
+            toprtopk_score = get_sim_matrix(topr_pooling,topk_pooling)
+            score = toprtopk_score + qtopk_score.unsqueeze(0) + qtopr_score.unsqueeze(1)
+
+            indics = torch.cartesian_prod(topr_indics, topk_indics)
+            score = torch.flatten(score)
+            assert(score.size(0) == indics.size(0))
+            score, ids_indics = torch.sort(qk_score, descending=True)
+            indics = torch.index_select(indics,0,ids_indics)
+            # (r,k)
+            return score, indics
+
+
+    def bert_pooling(self, input_ids, attention_mask, token_type_ids):
+        outputs = self.bert(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            token_type_ids=token_type_ids,
+            output_hidden_states=True,
+        )
+        embeddings = outputs.last_hidden_state
+        pooling = self.pooling(embeddings, attention_mask)
+        return pooling
+
+    def pooling(self, token_embeddings, attention_mask):
+        output_vectors = []
+        # [B,L] -> [B,L,1] -> [B,L,768]
+        input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+        t = token_embeddings * input_mask_expanded
+        # [B,768]
+        sum_embeddings = torch.sum(t, 1)
+        # [B,768]
+        sum_mask = input_mask_expanded.sum(1)
+        sum_mask = torch.clamp(sum_mask, min=1e-9)
+        output_vectors.append(sum_embeddings / sum_mask)
+        output_vector = torch.cat(output_vectors, 1)
+        return output_vector
+
+class infoNceLoss(nn.Module):
+    def __init__(self):
+        super(infoNceLoss, self).__init__()
+
+    def forward(self, sim_matrix):
+        # batch_size = positives.size(0)
+        # positives = positives.view(batch_size, -1)
+        # negatives = negatives.view(batch_size, -1)
+        # pos_e = torch.exp(positives)
+        # loss = -1 * pos_e / (pos_e + torch.exp(negatives).sum(dim=1))
+        # return loss.mean()
+        
+        sim_matrix = torch.exp(sim_matrix)
+        # print(sim_matrix)
+        # [batch,1]
+        positives = torch.diag(sim_matrix).unsqueeze(1)
+        # TODO 正例多了一个，特殊处理，这不是好做法
+        sum_matrix = sim_matrix.sum(1,keepdim=True) - positives
+        loss = -1 * torch.log(positives / (sum_matrix))
+        # print(positives)
+        # print(sum_matrix)
+        # print(loss)
+        # print(loss.mean())
         return loss.mean()
-
-    def infoNce_loss(self,positives, nagatives,batch_size):
-        positives = positives.view(batch_size,-1)
-        nagatives = nagatives.view(batch_size,-1)
-        pos_e = torch.exp(positives)
-        loss = -1 * pos_e / (pos_e + torch.exp(nagatives).sum(dim=1))
-        return loss.mean()
-
-class BertMultiSampelsStage3(BertPreTrainedModel):
-    def __init__(self, config,loss_type="hinge",do_predict=False):
-        super().__init__(config)
-        self.loss_type = loss_type
-        self.do_predict = do_predict
-        self.num_labels = 1
-
-        self.bert = BertModel(config)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        bert_hidden_size = self.bert.config.hidden_size
-        mlp_hidden_size_1 = int(bert_hidden_size / 2)
-        mlp_hidden_size_2 = int(mlp_hidden_size_1 / 2)
-        self.mlp = nn.Sequential(
-            nn.Linear(bert_hidden_size, mlp_hidden_size_1),
-            nn.Tanh(),
-            nn.Linear(mlp_hidden_size_1, mlp_hidden_size_2),
-            nn.Tanh(),
-            nn.Linear(mlp_hidden_size_2, 1),
-            nn.Sigmoid())
-
-        self.lam = 0.5
-        self.miu = 0.03
-        self.device_ = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.init_weights()
-        self.feature_score = torch.tensor([1.,0.9,0.1,0.,0.])
-    def forward(
-            self,
-            output_attentions=None,
-            output_hidden_states=None,
-            return_dict=None,
-            **batch,
-    ):
-        if "input_ids" in batch.keys():
-            outputs = self.bert(
-                batch["input_ids"],
-                attention_mask=batch["attention_mask"],
-                token_type_ids=batch["token_type_ids"],
-                output_attentions=output_attentions,
-                output_hidden_states=output_hidden_states,
-                return_dict=return_dict,
-            )
-            pooled_output = outputs[1]
-            pooled_output = self.dropout(pooled_output)
-            score = self.mlp(pooled_output)
-            return BertScoreOutput(
-                loss=None,
-                features=pooled_output,
-                scores=score,
-            )
-
-        else:
-            return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-            batch_size = batch["positive_input_ids_0"].size()[0]
-
-            all_features, all_scores = self._get_all_features_and_scores(
-                batch=batch,
-                output_attentions=output_attentions,
-                output_hidden_states=output_hidden_states,
-                return_dict=return_dict,
-            )
-            if self.loss_type == "infoNce":
-                loss = self.infoNce_loss(all_scores, batch_size)
-            else:
-                loss = self.separation_loss(all_scores, batch_size)
-                com_loss = self.compactness_loss(all_scores, batch_size)
-
-            return BertScoreOutput(
-                loss=loss,
-                features=all_features,
-                scores=all_scores,
-            )
-    def _get_all_features_and_scores(
-            self,
-            batch=None,
-            output_attentions=None,
-            output_hidden_states=None,
-            return_dict=None,
-    ):
-        all_features = []
-        all_scores = []
-        cluster_str = ["positive","nagative_level1", "nagative_level2", "nagative_level3", "nagative_level4"]
-        for str in cluster_str:
-            input_ids_in_cur_cluster = [
-                batch[key]
-                for key in batch.keys()
-                if str +'_input_ids' in key
-            ]
-            token_type_ids_in_cur_cluster = [
-                batch[key]
-                for key in batch.keys()
-                if str + '_token_type_ids' in key
-            ]
-            attention_mask_in_cur_cluster = [
-                batch[key]
-                for key in batch.keys()
-                if str + '_attention_mask' in key
-            ]
-            feature_list = []
-            score_list = []
-            for input_ids, token_type_ids, attention_mask in zip(
-                    input_ids_in_cur_cluster,
-                    token_type_ids_in_cur_cluster,
-                    attention_mask_in_cur_cluster):
-                outputs = self.bert(
-                    input_ids,
-                    attention_mask=attention_mask,
-                    token_type_ids=token_type_ids,
-                    output_attentions=output_attentions,
-                    output_hidden_states=output_hidden_states,
-                    return_dict=return_dict,
-                )
-                pooled_output = outputs[1]
-                pooled_output = self.dropout(pooled_output)
-                score = self.mlp(pooled_output)
-                feature_list.append(pooled_output.unsqueeze(0))
-                score_list.append(score.unsqueeze(0))
-            features_in_cur_cluster = torch.cat(feature_list, dim=0)
-            scores_in_cur_cluster = torch.cat(score_list, dim=0)
-            all_features.append(features_in_cur_cluster)
-            all_scores.append(scores_in_cur_cluster)
-        return all_features, all_scores
-
-    def hinge_loss(self,positives,nagatives,batch_size,lam):
-        positives = positives.view(-1)
-        nagatives = nagatives.view(batch_size, -1).max(dim=1).values
-        loss = 1 * lam + nagatives - positives
-        return loss.mean()
-
-    def infoNce_loss(self, all_scores ,batch_size):
-        score_list = []
-        positives = all_scores[0].view(batch_size,-1)  #(b,1)
-        for score in all_scores[1:] :
-            score = score.view(batch_size, -1, 1)
-            score_list.append(score)
-        nagatives = torch.cat(score_list, dim=2) ##(bs,ns,ks)
-        negative_size = nagatives.shape[1]
-        features = self.feature_score[1:].view(1, -1).to(self.device_)
-        features = features.repeat(batch_size, negative_size).view(batch_size, negative_size, -1)
-        nagatives = torch.abs(nagatives - features).view(batch_size, -1)
-        pos_e = torch.exp(positives)
-        loss = -1 * pos_e / (pos_e + torch.exp(nagatives).sum(dim=1))
-        return loss.mean()
-
-    def separation_loss(self, all_scores, batch_size):
-        score_list = []
-        for score in all_scores:
-            score = score.view(batch_size, -1).mean(dim=-1).view(batch_size, -1)
-            score_list.append(score)
-        kind_score = torch.cat(score_list, dim=1)  ##(bs,ks)
-        kind_size = kind_score.shape[-1]
-        score_metric = kind_score.repeat(1, kind_size).view(batch_size, kind_size, -1)
-
-        feature_score = self.feature_score.view(1,-1).to(self.device_)
-        feature_metric = feature_score.repeat(batch_size, kind_size).view(batch_size, kind_size, -1)
-
-        trig_metric = torch.triu(torch.ones(kind_size, kind_size), diagonal=1).repeat(batch_size, 1, 1).to(self.device_)
-
-        zero_metric = torch.zeros(batch_size, kind_size, kind_size).to(self.device_)
-
-        score = score_metric - score_metric.transpose(1,2)
-        feature = - feature_metric + feature_metric.transpose(1,2)
-        loss = trig_metric * (score + feature)
-        loss = torch.where(loss > 0, loss, zero_metric)
-        return loss.mean()
-
-    def compactness_loss(self, all_score, batch_size):
-        all_score = all_score[1:]
-        negative_size = all_score[0].shape[0]
-        center_list = []
-        point_list = []
-        for score in all_score:
-            score = score.view(batch_size, -1)
-            point_list.append(score.view(batch_size, -1, 1))
-            center_list.append(score.mean(dim=1).view(batch_size,-1).repeat(1,negative_size).view(batch_size, -1, 1))
-        point_metric = torch.cat(point_list, dim=2)
-        center_metric = torch.cat(center_list, dim=2)
-        kind_size = point_metric.shape[2]
-        miu_metric = torch.ones(batch_size, negative_size, kind_size).to(self.device_) * self.miu
-        zero_metric = torch.zeros(batch_size, negative_size, kind_size).to(self.device_)
-        loss = torch.abs(point_metric - center_metric) - miu_metric
-        loss = torch.where(loss > 0, loss, zero_metric)
-        return loss.mean()
-
-
-class BertMultiSampelsStage3_6kinds(BertPreTrainedModel):
-    def __init__(self, config,loss_type="hinge",do_predict=False):
-        super().__init__(config)
-        self.loss_type = loss_type
-        self.do_predict = do_predict
-        self.num_labels = 1
-
-        self.bert = BertModel(config)
-        self.dropout = nn.Dropout(config.hidden_dropout_prob)
-        bert_hidden_size = self.bert.config.hidden_size
-        mlp_hidden_size_1 = int(bert_hidden_size / 2)
-        mlp_hidden_size_2 = int(mlp_hidden_size_1 / 2)
-        self.mlp = nn.Sequential(
-            nn.Linear(bert_hidden_size, mlp_hidden_size_1),
-            nn.Tanh(),
-            nn.Linear(mlp_hidden_size_1, mlp_hidden_size_2),
-            nn.Tanh(),
-            nn.Linear(mlp_hidden_size_2, 1),
-            nn.Sigmoid())
-
-        self.lam = 0.5
-        self.miu = 0.03
-        self.device_ = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.init_weights()
-        self.feature_score = torch.tensor([1.,0.9,0.1,0.,0.,0.,0.5])
-    def forward(
-            self,
-            output_attentions=None,
-            output_hidden_states=None,
-            return_dict=None,
-            **batch,
-    ):
-        if "input_ids" in batch.keys():
-            outputs = self.bert(
-                batch["input_ids"],
-                attention_mask=batch["attention_mask"],
-                token_type_ids=batch["token_type_ids"],
-                output_attentions=output_attentions,
-                output_hidden_states=output_hidden_states,
-                return_dict=return_dict,
-            )
-            pooled_output = outputs[1]
-            pooled_output = self.dropout(pooled_output)
-            score = self.mlp(pooled_output)
-            return BertScoreOutput(
-                loss=None,
-                features=pooled_output,
-                scores=score,
-            )
-
-        else:
-            return_dict = return_dict if return_dict is not None else self.config.use_return_dict
-            batch_size = batch["positive_input_ids_0"].size()[0]
-
-            all_features, all_scores = self._get_all_features_and_scores(
-                batch=batch,
-                output_attentions=output_attentions,
-                output_hidden_states=output_hidden_states,
-                return_dict=return_dict,
-            )
-            if self.loss_type == "infoNce":
-                loss = self.infoNce_loss(all_scores, batch_size)
-            else:
-                loss = self.separation_loss(all_scores, batch_size)
-                com_loss = self.compactness_loss(all_scores, batch_size)
-
-            return BertScoreOutput(
-                loss=loss,
-                features=all_features,
-                scores=all_scores,
-            )
-    def _get_all_features_and_scores(
-            self,
-            batch=None,
-            output_attentions=None,
-            output_hidden_states=None,
-            return_dict=None,
-    ):
-        all_features = []
-        all_scores = []
-        cluster_str = ["positive","nagative_level1", "nagative_level2", "nagative_level3", "nagative_level4", "nagative_level5","nagative_level6"]
-        for str in cluster_str:
-            input_ids_in_cur_cluster = [
-                batch[key]
-                for key in batch.keys()
-                if str +'_input_ids' in key
-            ]
-            token_type_ids_in_cur_cluster = [
-                batch[key]
-                for key in batch.keys()
-                if str + '_token_type_ids' in key
-            ]
-            attention_mask_in_cur_cluster = [
-                batch[key]
-                for key in batch.keys()
-                if str + '_attention_mask' in key
-            ]
-            feature_list = []
-            score_list = []
-            for input_ids, token_type_ids, attention_mask in zip(
-                    input_ids_in_cur_cluster,
-                    token_type_ids_in_cur_cluster,
-                    attention_mask_in_cur_cluster):
-                outputs = self.bert(
-                    input_ids,
-                    attention_mask=attention_mask,
-                    token_type_ids=token_type_ids,
-                    output_attentions=output_attentions,
-                    output_hidden_states=output_hidden_states,
-                    return_dict=return_dict,
-                )
-                pooled_output = outputs[1]
-                pooled_output = self.dropout(pooled_output)
-                score = self.mlp(pooled_output)
-                feature_list.append(pooled_output.unsqueeze(0))
-                score_list.append(score.unsqueeze(0))
-            features_in_cur_cluster = torch.cat(feature_list, dim=0)
-            scores_in_cur_cluster = torch.cat(score_list, dim=0)
-            all_features.append(features_in_cur_cluster)
-            all_scores.append(scores_in_cur_cluster)
-        return all_features, all_scores
-
-    def hinge_loss(self,positives,nagatives,batch_size,lam):
-        positives = positives.view(-1)
-        nagatives = nagatives.view(batch_size, -1).max(dim=1).values
-        loss = 1 * lam + nagatives - positives
-        return loss.mean()
-
-    def infoNce_loss(self, all_scores ,batch_size):
-        score_list = []
-        positives = all_scores[0].view(batch_size,-1)  #(b,1)
-        for score in all_scores[1:] :
-            score = score.view(batch_size, -1, 1)
-            score_list.append(score)
-        nagatives = torch.cat(score_list, dim=2) ##(bs,ns,ks)
-        negative_size = nagatives.shape[1]
-        features = self.feature_score[1:].view(1, -1).to(self.device_)
-        features = features.repeat(batch_size, negative_size).view(batch_size, negative_size, -1)
-        nagatives = torch.abs(nagatives - features).view(batch_size, -1)
-        pos_e = torch.exp(positives)
-        loss = -1 * pos_e / (pos_e + torch.exp(nagatives).sum(dim=1))
-        return loss.mean()
-
-    def separation_loss(self, all_scores, batch_size):
-        score_list = []
-        for score in all_scores:
-            score = score.view(batch_size, -1).mean(dim=-1).view(batch_size, -1)
-            score_list.append(score)
-        kind_score = torch.cat(score_list, dim=1)  ##(bs,ks)
-        kind_size = kind_score.shape[-1]
-        score_metric = kind_score.repeat(1, kind_size).view(batch_size, kind_size, -1)
-
-        feature_score = self.feature_score.view(1,-1).to(self.device_)
-        feature_metric = feature_score.repeat(batch_size, kind_size).view(batch_size, kind_size, -1)
-
-        trig_metric = torch.triu(torch.ones(kind_size, kind_size), diagonal=1).repeat(batch_size, 1, 1).to(self.device_)
-
-        zero_metric = torch.zeros(batch_size, kind_size, kind_size).to(self.device_)
-
-        score = score_metric - score_metric.transpose(1,2)
-        feature = - feature_metric + feature_metric.transpose(1,2)
-        loss = trig_metric * (score + feature)
-        loss = torch.where(loss > 0, loss, zero_metric)
-        return loss.mean()
-
-    def compactness_loss(self, all_score, batch_size):
-        all_score = all_score[1:]
-        negative_size = all_score[0].shape[0]
-        center_list = []
-        point_list = []
-        for score in all_score:
-            score = score.view(batch_size, -1)
-            point_list.append(score.view(batch_size, -1, 1))
-            center_list.append(score.mean(dim=1).view(batch_size,-1).repeat(1,negative_size).view(batch_size, -1, 1))
-        point_metric = torch.cat(point_list, dim=2)
-        center_metric = torch.cat(center_list, dim=2)
-        kind_size = point_metric.shape[2]
-        miu_metric = torch.ones(batch_size, negative_size, kind_size).to(self.device_) * self.miu
-        zero_metric = torch.zeros(batch_size, negative_size, kind_size).to(self.device_)
-        loss = torch.abs(point_metric - center_metric) - miu_metric
-        loss = torch.where(loss > 0, loss, zero_metric)
-        return loss.mean()
-

@@ -1,0 +1,38 @@
+{
+  "dataset_args": {
+    "max_query_length": 60,
+    "max_knowledge_length": 128,
+    "max_response_length": 40,
+    "device": "cuda:0"
+  },
+
+  "topk_response": 1000,
+  "topk_knowledge": 5,
+
+  "model_name_or_path": "models/stage1/stage1_32_24_best_cpt",
+
+  "evaluation_strategy": "steps",
+  "eval_steps": 1000,
+  "save_steps": 1000,
+  "logging_steps": 1000,
+  "load_best_model_at_end": true,
+  "metric_for_best_model": "accuracy",
+  "max_seq_length": 512,
+  "doc_stride": 128,
+
+  "overwrite_output_dir": true,
+
+  "per_gpu_train_batch_size": 8,
+  "gradient_accumulation_steps": 8,
+
+  "learning_rate": 3e-5,
+  "adam_epsilon": 1e-8,
+  "max_grad_norm": 1.0,
+  "num_train_epochs": 20,
+  "warmup_steps": 0,
+
+  "fp16": "",
+
+  "seed": 42
+}
+
