@@ -121,10 +121,11 @@ def train(args, train_dataset, eval_dataset, model: PreTrainedModel, tokenizer: 
                 epoch_iterator.set_postfix(Loss=tr_loss / local_steps)
                 total_log_loss = 0
 
-            if global_step != 0 and (global_step % 1000 == 0):
+            if (step + 1) % args.save_steps == 0:
 
                 results = evaluate(args, eval_dataset, model, run_batch_fn_eval, desc=str(global_step))
-                pprint(f'steps:{global_step}\n {results}')
+                print(f'steps:{global_step}')
+                pprint(results)
 
                 output_dir = os.path.join(args.output_dir, "{}-{}".format("checkpoint", global_step))
                 os.makedirs(output_dir, exist_ok=True)
@@ -147,7 +148,7 @@ def train(args, train_dataset, eval_dataset, model: PreTrainedModel, tokenizer: 
     return global_step, tr_loss / local_steps
 
 
-def evaluate(args, eval_dataset, model: PreTrainedModel, run_batch_fn, desc="") -> Dict:
+def evaluate(args, eval_dataset, model: PreTrainedModel, run_batch_fn, desc=""):
     """ Model evaluation for knowledge seeking turn detection and knowledge selection
         Report evaluation results if gold labels are available
     """
@@ -200,13 +201,10 @@ def get_eval_performance(args, scores):
         indics = item["indics"]
         if len(indics) >= 1 and ([0,0]==indics[:1]).all(1).any():
             rk_cnt_1 += 1
-            print(indics[:1])
         if len(indics) >= 1 and 0 in indics[:1,0]:
             r_cnt_1 += 1
-            print(indics[:1])
         if len(indics) >= 1 and 0 in indics[:1,1]:
             k_cnt_1 += 1
-            print(indics[:1])
 
         if len(indics) >= 2 and ([0,0]==indics[:2]).all(1).any():
             rk_cnt_2 += 1
@@ -228,7 +226,7 @@ def get_eval_performance(args, scores):
             r_cnt_5 += 1
         if len(indics) >= 5 and 0 in indics[:5,1]:
             k_cnt_5 += 1
-
+            
     return {
         "knowledge": {
             "accuracy": format(float(k_cnt_1 / total), '.4f'),

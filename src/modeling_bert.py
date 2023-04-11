@@ -2280,7 +2280,7 @@ class BertMultiSampelsWithInfoNceLoss(BertPreTrainedModel):
 
             # 拼接后面，此时每一行有两个正例的分数
             sim_matrix = torch.cat((sim_ne_k,sim_ne_r),dim=1)
-            print(sim_matrix)
+            # print(sim_matrix)
 
             # weights = F.softmax(self.w)
             # print(torch.stack((qk_sim_matrix,rk_sim_matrix,qr_sim_matrix),dim=0).size())

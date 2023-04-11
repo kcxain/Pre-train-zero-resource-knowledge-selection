@@ -1,4 +1,5 @@
 import logging
+import pprint
 import torch
 import json
 from torch.utils.data import Dataset
@@ -282,6 +283,9 @@ class WowDataset(Dataset):
         dial_data = data["dial_data"]
         result = []
         cnt2 = -1
+        idx = 0
+        nk = 0
+        nr = 0
         for domain, d_doc_dials in dial_data.items():
             for doc_id, dials in d_doc_dials.items():
                 for dial in dials:
@@ -332,6 +336,8 @@ class WowDataset(Dataset):
 
                         if len(negative_knowledge)==0 or len(negative_response)==0:
                             continue
+                        if(len(negative_knowledge) != 99):
+                            print(len(negative_knowledge))
                         result.append(
                             {
                                 "knowledge": knowledge,
