@@ -79,21 +79,21 @@ class WowDataset(Dataset):
             ne_knowledge_token_type_ids_list = []
             for ne in example["negative_knowledge"]:
                 ne_knowledge_input_ids, ne_knowledge_attention_mask, ne_knowledge_token_type_ids = \
-                self.build_build_input_from_segments(ne, self.max_knowledge_length)
+                    self.build_build_input_from_segments(ne, self.max_knowledge_length)
                 ne_knowledge_input_ids_list.append(ne_knowledge_input_ids)
                 ne_knowledge_attention_mask_list.append(ne_knowledge_attention_mask)
                 ne_knowledge_token_type_ids_list.append(ne_knowledge_token_type_ids)
-            
+
             ne_response_input_ids_list = []
             ne_response_attention_mask_list = []
             ne_response_token_type_ids_list = []
             for ne in example["negative_response"]:
                 ne_response_input_ids, ne_response_attention_mask, ne_response_token_type_ids = \
-                self.build_build_input_from_segments(ne, self.max_response_length)
+                    self.build_build_input_from_segments(ne, self.max_response_length)
                 ne_response_input_ids_list.append(ne_response_input_ids)
                 ne_response_attention_mask_list.append(ne_response_attention_mask)
                 ne_response_token_type_ids_list.append(ne_response_token_type_ids)
-            
+
             instance["query_input_ids"] = query_input_ids
             instance["query_attention_mask"] = query_attention_mask
             instance["query_token_type_ids"] = query_token_type_ids
@@ -116,7 +116,6 @@ class WowDataset(Dataset):
 
             return instance
 
-
     def build_build_input_from_segments(self, sentence, max_length):
         sentence_tokens = self.tokenizer(
             sentence,
@@ -137,12 +136,16 @@ class WowDataset(Dataset):
             response_input_ids = torch.tensor([ins["response_input_ids"] for ins in batch]).to(self.args.device)
 
             query_token_type_ids = torch.tensor([ins["query_token_type_ids"] for ins in batch]).to(self.args.device)
-            knowledge_token_type_ids = torch.tensor([ins["knowledge_token_type_ids"] for ins in batch]).to(self.args.device)
-            response_token_type_ids = torch.tensor([ins["response_token_type_ids"] for ins in batch]).to(self.args.device)
+            knowledge_token_type_ids = torch.tensor([ins["knowledge_token_type_ids"] for ins in batch]).to(
+                self.args.device)
+            response_token_type_ids = torch.tensor([ins["response_token_type_ids"] for ins in batch]).to(
+                self.args.device)
 
             query_attention_mask = torch.tensor([ins["query_attention_mask"] for ins in batch]).to(self.args.device)
-            knowledge_attention_mask = torch.tensor([ins["knowledge_attention_mask"] for ins in batch]).to(self.args.device)
-            response_attention_mask = torch.tensor([ins["response_attention_mask"] for ins in batch]).to(self.args.device)
+            knowledge_attention_mask = torch.tensor([ins["knowledge_attention_mask"] for ins in batch]).to(
+                self.args.device)
+            response_attention_mask = torch.tensor([ins["response_attention_mask"] for ins in batch]).to(
+                self.args.device)
 
             input_ids = {
                 "query_input_ids": query_input_ids,
@@ -163,28 +166,38 @@ class WowDataset(Dataset):
             }
 
             return input_ids, attention_mask, token_type_ids
-        
+
         else:
             query_input_ids = torch.tensor([ins["query_input_ids"] for ins in batch]).to(self.args.device)
             knowledge_input_ids = torch.tensor([ins["knowledge_input_ids"] for ins in batch]).to(self.args.device)
             response_input_ids = torch.tensor([ins["response_input_ids"] for ins in batch]).to(self.args.device)
 
             query_token_type_ids = torch.tensor([ins["query_token_type_ids"] for ins in batch]).to(self.args.device)
-            knowledge_token_type_ids = torch.tensor([ins["knowledge_token_type_ids"] for ins in batch]).to(self.args.device)
-            response_token_type_ids = torch.tensor([ins["response_token_type_ids"] for ins in batch]).to(self.args.device)
+            knowledge_token_type_ids = torch.tensor([ins["knowledge_token_type_ids"] for ins in batch]).to(
+                self.args.device)
+            response_token_type_ids = torch.tensor([ins["response_token_type_ids"] for ins in batch]).to(
+                self.args.device)
 
             query_attention_mask = torch.tensor([ins["query_attention_mask"] for ins in batch]).to(self.args.device)
-            knowledge_attention_mask = torch.tensor([ins["knowledge_attention_mask"] for ins in batch]).to(self.args.device)
-            response_attention_mask = torch.tensor([ins["response_attention_mask"] for ins in batch]).to(self.args.device)
+            knowledge_attention_mask = torch.tensor([ins["knowledge_attention_mask"] for ins in batch]).to(
+                self.args.device)
+            response_attention_mask = torch.tensor([ins["response_attention_mask"] for ins in batch]).to(
+                self.args.device)
 
-            ne_knowledge_input_ids_list = torch.tensor([ins["ne_knowledge_input_ids_list"] for ins in batch]).to(self.args.device)
-            ne_knowledge_attention_mask_list = torch.tensor([ins["ne_knowledge_attention_mask_list"] for ins in batch]).to(self.args.device)
-            ne_knowledge_token_type_ids_list = torch.tensor([ins["ne_knowledge_token_type_ids_list"] for ins in batch]).to(self.args.device)
+            ne_knowledge_input_ids_list = torch.tensor([ins["ne_knowledge_input_ids_list"] for ins in batch]).to(
+                self.args.device)
+            ne_knowledge_attention_mask_list = torch.tensor(
+                [ins["ne_knowledge_attention_mask_list"] for ins in batch]).to(self.args.device)
+            ne_knowledge_token_type_ids_list = torch.tensor(
+                [ins["ne_knowledge_token_type_ids_list"] for ins in batch]).to(self.args.device)
 
-            ne_response_input_ids_list = torch.tensor([ins["ne_response_input_ids_list"] for ins in batch]).to(self.args.device)
-            ne_response_attention_mask_list = torch.tensor([ins["ne_response_attention_mask_list"] for ins in batch]).to(self.args.device)
-            ne_response_token_type_ids_list = torch.tensor([ins["ne_response_token_type_ids_list"] for ins in batch]).to(self.args.device)
-            
+            ne_response_input_ids_list = torch.tensor([ins["ne_response_input_ids_list"] for ins in batch]).to(
+                self.args.device)
+            ne_response_attention_mask_list = torch.tensor(
+                [ins["ne_response_attention_mask_list"] for ins in batch]).to(self.args.device)
+            ne_response_token_type_ids_list = torch.tensor(
+                [ins["ne_response_token_type_ids_list"] for ins in batch]).to(self.args.device)
+
             input_ids = {
                 "query_input_ids": query_input_ids,
                 "knowledge_input_ids": knowledge_input_ids,
@@ -290,7 +303,7 @@ class WowDataset(Dataset):
             for doc_id, dials in d_doc_dials.items():
                 for dial in dials:
                     cnt2 += 1
-                    if cnt2 >=100:
+                    if cnt2 >= 100:
                         break
                     if cnt2 == 345:
                         continue
@@ -332,11 +345,12 @@ class WowDataset(Dataset):
                         negative_response = []
                         for response in response_spans.values():
                             if response["text_sp"] != correct_response:
-                                negative_response.append(" ".join(response["text_sp"].split()[:self.max_response_length]))
+                                negative_response.append(
+                                    " ".join(response["text_sp"].split()[:self.max_response_length]))
 
-                        if len(negative_knowledge)==0 or len(negative_response)==0:
+                        if len(negative_knowledge) == 0 or len(negative_response) == 0:
                             continue
-                        if(len(negative_knowledge) != 99):
+                        if (len(negative_knowledge) != 99):
                             print(len(negative_knowledge))
                         result.append(
                             {
@@ -349,10 +363,7 @@ class WowDataset(Dataset):
                             }
                         )
         return result
-    
+
     def __len__(self):
         return len(self.examples)
 
-
-    
-    
